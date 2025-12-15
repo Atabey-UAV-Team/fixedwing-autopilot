@@ -1,9 +1,13 @@
 clc, clear, close all
 
+addpath('sistemDinamikleri')
 simTime = 60;
 
 % SABİTLER
 x0 = [0;
+    0;
+    0;
+    0;
     0;
     0;
     0;
@@ -33,6 +37,7 @@ u4min = 0;              % Motor çalışma aralığı
 u4max = 1;
 
 %% SİMÜLASYON
+clc
 sim("ATABEY_sistem_modeli.slx")
 
 %% PLOTLAR
