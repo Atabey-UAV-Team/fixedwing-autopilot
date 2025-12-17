@@ -1,0 +1,38 @@
+sequenceDiagram
+    title Autonomous Flight Control
+
+    participant User
+    participant GCS
+    participant RC Module
+    participant Flight Controller
+    participant Raspberry Pi
+    participant Actuators
+    participant ESC
+    participant Thrust Motor
+
+    loop Control Loop (high-rate)
+        Flight Controller ->> Flight Controller: Read sensors + update estimation
+        Flight Controller ->> Flight Controller: Navigation targets (mission)
+        Flight Controller ->> Flight Controller: Control (roll/pitch/throttle)
+        Flight Controller ->> Flight Controller: Elevon mix -> left/right
+
+        Flight Controller ->> Actuators: Set Left/Right elevon outputs
+        Actuators -->> Flight Controller: Applied
+
+        Flight Controller ->> ESC: Set throttle command
+        ESC ->> Thrust Motor: Apply thrust
+    end
+
+    par Telemetry Status (low-rate)
+        Flight Controller ->> RC Module: Telemetry packet (pos,alt,bat,health)
+        RC Module ->> GCS: Forward telemetry
+        GCS ->> User: Display telemetry
+    and Companion Health (periodic)
+        Flight Controller ->> Raspberry Pi: Health ping + optional compute
+        Raspberry Pi -->> Flight Controller: OK / WARN / FAIL
+    end
+
+    Flight Controller ->> Flight Controller: Mission complete check
+    Flight Controller ->> RC Module: STATE=MISSION_COMPLETE
+    RC Module ->> GCS: STATE=MISSION_COMPLETE
+    GCS ->> User: Display STATE=MISSION_COMPLETE

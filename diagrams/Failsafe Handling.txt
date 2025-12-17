@@ -1,0 +1,57 @@
+sequenceDiagram
+    title Failsafe Handling (Link Loss / Low Battery / Critical Fault)
+
+    participant User
+    participant GCS
+    participant RC Module
+    participant Flight Controller
+    participant Raspberry Pi
+    participant Actuators
+    participant ESC
+    participant Thrust Motor
+
+    alt RF Link Loss (GCS unreachable)
+        RC Module -->> Flight Controller: Heartbeat timeout
+        Flight Controller ->> Flight Controller: Trigger FAILSAFE_LINK_LOSS
+        Flight Controller ->> RC Module: STATE=FAILSAFE_LINK_LOSS
+        RC Module ->> GCS: STATE=FAILSAFE_LINK_LOSS
+        GCS ->> User: Display STATE=FAILSAFE_LINK_LOSS
+
+        Flight Controller ->> Flight Controller: Policy select (Continue / RTL)
+        Flight Controller ->> RC Module: MODE_UPDATE (CONTINUE or RTL)
+        RC Module ->> GCS: MODE_UPDATE
+
+        Flight Controller ->> Actuators: Apply safe control limits
+        Flight Controller ->> ESC: Apply safe throttle policy
+        ESC ->> Thrust Motor: Apply thrust (safe)
+
+    else Low Battery
+        Flight Controller ->> Flight Controller: Battery below threshold detected
+        Flight Controller ->> Flight Controller: Trigger FAILSAFE_LOW_BAT
+        Flight Controller ->> RC Module: STATE=FAILSAFE_LOW_BAT
+        RC Module ->> GCS: STATE=FAILSAFE_LOW_BAT
+        GCS ->> User: Display STATE=FAILSAFE_LOW_BAT
+
+        Flight Controller ->> Flight Controller: Policy select (RTL / LAND)
+        Flight Controller ->> RC Module: MODE_UPDATE (RTL or LAND)
+        RC Module ->> GCS: MODE_UPDATE
+
+        Flight Controller ->> Actuators: Navigate + stabilize (safe limits)
+        Flight Controller ->> ESC: Throttle limit / descend policy
+        ESC ->> Thrust Motor: Apply thrust (limited)
+
+    else Critical Fault (Estimation/Sensor/Companion)
+        Raspberry Pi -->> Flight Controller: Critical fault OR no response
+        Flight Controller ->> Flight Controller: Trigger FAILSAFE_CRITICAL
+        Flight Controller ->> RC Module: STATE=FAILSAFE_CRITICAL
+        RC Module ->> GCS: STATE=FAILSAFE_CRITICAL
+        GCS ->> User: Display STATE=FAILSAFE_CRITICAL
+
+        Flight Controller ->> Actuators: Disable outputs
+        Flight Controller ->> ESC: Throttle cut
+        ESC ->> Thrust Motor: Motor disarmed
+
+        Flight Controller ->> RC Module: STATE=ABORTED
+        RC Module ->> GCS: STATE=ABORTED
+        GCS ->> User: Display STATE=ABORTED
+    end

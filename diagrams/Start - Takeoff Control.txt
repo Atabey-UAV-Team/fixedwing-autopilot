@@ -1,0 +1,55 @@
+sequenceDiagram
+    title Start - Takeoff Control
+
+    participant User
+    participant GCS
+    participant RC Module
+    participant Flight Controller
+    participant Raspberry Pi
+    participant Actuators
+    participant ESC
+    participant Thrust Motor
+
+    User ->> GCS: Press START
+    GCS ->> RC Module: Send START command
+    RC Module ->> Flight Controller: START
+
+    Flight Controller ->> Flight Controller: Verify STATE=READY_TO_START
+    Flight Controller ->> Raspberry Pi: Confirm companion OK
+    Raspberry Pi -->> Flight Controller: OK / FAIL
+
+    alt Preconditions OK
+        Flight Controller ->> Flight Controller: STATE=ARMED
+        Flight Controller ->> RC Module: STATE=ARMED
+        RC Module ->> GCS: STATE=ARMED
+        GCS ->> User: Display STATE=ARMED
+
+        Flight Controller ->> ESC: Start ESC (throttle = 0)
+        ESC -->> Flight Controller: ESC Started
+        ESC ->> Thrust Motor: Motor disarmed
+
+        Flight Controller ->> Actuators: Enable outputs (safe limits)
+        Actuators -->> Flight Controller: Outputs enabled
+
+        Flight Controller ->> Flight Controller: STATE=TAKEOFF
+        Flight Controller ->> RC Module: STATE=TAKEOFF
+        RC Module ->> GCS: STATE=TAKEOFF
+        GCS ->> User: Display STATE=TAKEOFF
+
+        Flight Controller ->> ESC: Throttle ramp to takeoff value
+        ESC ->> Thrust Motor: Spin up (commanded)
+
+        Flight Controller ->> Actuators: Hold elevon neutral + trim
+        Actuators -->> Flight Controller: Applied
+
+        Flight Controller ->> Flight Controller: Check takeoff condition met
+        Flight Controller ->> RC Module: STATE=CRUISE
+        RC Module ->> GCS: STATE=CRUISE
+        GCS ->> User: Display STATE=CRUISE
+    else Preconditions FAIL
+        Flight Controller ->> Actuators: Keep outputs disabled
+        Flight Controller ->> ESC: Throttle cut
+        Flight Controller ->> RC Module: STATE=ERROR_START
+        RC Module ->> GCS: STATE=ERROR_START
+        GCS ->> User: Display STATE=ERROR_START
+    end

@@ -1,0 +1,49 @@
+sequenceDiagram
+    title Boot Control
+
+    participant User
+    participant GCS
+    participant RC Module
+    participant Flight Controller
+    participant Raspberry Pi
+    participant Actuators
+    participant ESC
+    participant Thrust Motor
+
+    User ->> GCS: Power ON / System start
+    GCS ->> RC Module: Establish RF link
+    RC Module ->> Flight Controller: Link handshake
+
+    Flight Controller ->> Flight Controller: MCU boot & firmware start
+    Flight Controller ->> Raspberry Pi: Initialize companion computer
+    Raspberry Pi -->> Flight Controller: Boot completed
+
+    Flight Controller ->> Flight Controller: Load parameters & mission config
+    Flight Controller ->> Actuators: Pre-arm surface test (limited/safe)
+    Actuators -->> Flight Controller: Actuators OK / FAIL
+
+    Flight Controller ->> ESC: Pre-arm check (throttle = 0)
+    ESC -->> Flight Controller: ESC OK / FAIL
+    ESC ->> Thrust Motor: Remain disarmed
+
+    Flight Controller ->> Flight Controller: Sensor and system self-test
+
+    Flight Controller ->> RC Module: STATE=BOOTING
+    RC Module ->> GCS: STATE=BOOTING
+    GCS ->> User: Display STATE=BOOTING
+
+    alt Boot successful
+        Flight Controller ->> Actuators: Keep outputs disabled (until START)
+        Flight Controller ->> ESC: Initialize ESC (throttle = 0)
+        ESC ->> Thrust Motor: Motor disarmed
+
+        Flight Controller ->> RC Module: STATE=READY_TO_START
+        RC Module ->> GCS: STATE=READY_TO_START
+        GCS ->> User: Display STATE=READY_TO_START
+    else Boot failed
+        Flight Controller ->> Actuators: Disable outputs
+        Flight Controller ->> ESC: Throttle cut
+        Flight Controller ->> RC Module: STATE=ERROR_BOOT
+        RC Module ->> GCS: STATE=ERROR_BOOT
+        GCS ->> User: Display STATE=ERROR_BOOT
+    end
