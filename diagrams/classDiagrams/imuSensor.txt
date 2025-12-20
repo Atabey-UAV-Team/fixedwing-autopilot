@@ -9,10 +9,35 @@ enum ImuStatusBits {
   IMU_TIMEOUT
   IMU_SPI_ERROR
   IMU_DATA_OVERFLOW
+  IMU_BAD_WHOAMI
+}
+
+enum AccelRange {
+  A_2G
+  A_4G
+  A_8G
+  A_16G
+}
+
+enum GyroRange {
+  G_250DPS
+  G_500DPS
+  G_1000DPS
+  G_2000DPS
+}
+
+enum DlpfBandwidth {
+  DLPF_OFF
+  DLPF_184HZ
+  DLPF_92HZ
+  DLPF_41HZ
+  DLPF_20HZ
+  DLPF_10HZ
+  DLPF_5HZ
 }
 
 ' =====================
-' Core types (IMU)
+' Core types
 ' =====================
 package "App/core" {
 
@@ -20,12 +45,6 @@ package "App/core" {
     +x: float
     +y: float
     +z: float
-    --
-    +Vec3f()
-    +Vec3f(x: float, y: float, z: float)
-    +operator+(o: Vec3f): Vec3f
-    +operator-(o: Vec3f): Vec3f
-    +operator*(s: float): Vec3f
   }
 
   class ImuSample {
@@ -34,9 +53,21 @@ package "App/core" {
     +gyro_rads: Vec3f
     +temp_C: float
     +status: uint32
-    --
-    +clear(): void
-    +isValid(): bool
+  }
+
+  class ImuConfig {
+    +accel_range: AccelRange
+    +gyro_range: GyroRange
+    +dlpf: DlpfBandwidth
+    +sample_rate_hz: uint16
+    +timeout_us: uint32
+  }
+
+  class ImuCalib {
+    +accel_bias_mps2: Vec3f
+    +gyro_bias_rads: Vec3f
+    +accel_scale: Vec3f
+    +gyro_scale: Vec3f
   }
 }
 
@@ -50,28 +81,36 @@ package "App/drivers/imu" {
     -cs_port: void*
     -cs_pin: uint16
 
+    -cfg: ImuConfig
+    -cal: ImuCalib
+
     -accel_lsb2mps2: float
     -gyro_lsb2rads: float
 
     -last_err: uint32
     -last_read_us: uint32
-    --
-    +Mpu9250(hspi: void*, cs_port: void*, cs_pin: uint16)
-    +init(): bool
-    +read(out: ImuSample): bool
+
+    +init(cfg: ImuConfig): bool
+    +setCalib(c: ImuCalib): void
+    +read(out: ImuSample, now_us: uint32): bool
     +healthy(now_us: uint32): bool
-    +lastError(): uint32
-    --
-    -readRegs(reg: uint8, buf: uint8*, len: uint16): bool
-    -writeReg(reg: uint8, val: uint8): bool
-    -readRaw(ax: int16&, ay: int16&, az: int16&, gx: int16&, gy: int16&, gz: int16&, temp: int16&): bool
   }
 }
 
 ' =====================
 ' Relationships
 ' =====================
+Mpu9250 *-- ImuConfig
+Mpu9250 *-- ImuCalib
 Mpu9250 ..> ImuSample
-ImuSample ..> Vec3f
+
+ImuSample *-- Vec3f
+ImuCalib *-- Vec3f
+
+ImuConfig ..> AccelRange
+ImuConfig ..> GyroRange
+ImuConfig ..> DlpfBandwidth
+
 ImuSample ..> ImuStatusBits
+
 @enduml
