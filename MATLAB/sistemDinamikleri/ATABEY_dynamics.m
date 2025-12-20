@@ -1,4 +1,4 @@
-function [XDOT, GeodeticCoordinates] = ATABEY_model(X, U)
+function [XDOT, GeodeticCoordinates] = ATABEY_dynamics(X, U)
 
 %% DURUM VE KONTROL TANIMLAMALARI
 x1 = X(1);  % u
@@ -10,7 +10,7 @@ x6 = X(6);  % r
 x7 = X(7);  % phi
 x8 = X(8);  % theta
 x9 = X(9);  % psi
-x13 = X(13); % Motor açısal hız
+x13 = X(13); % Motor açısal hız 
 
 u1 = U(1);  % delta_Aileron (rad)
 u2 = U(2);  % delta_Stabilizer (rad)
@@ -63,11 +63,11 @@ motor_CT1 = 0;
 motor_CT2 = 0;
 
 %% DEĞİŞKEN DEĞERLER
-airspeed = max(sqrt(x1^2 + x2^2 + x3^2), 0.1);  % Airspeed
+airspeed = max(sqrt(x1^2 + x2^2 + x3^2), 0.1);    % Airspeed
 % Kalkış anında kararsızlık koruması
 
-alpha = atan2(x3,x1);                           % α
-beta = asin(x2 / airspeed);                       % β
+alpha = atan2(x3,x1);                             % α
+beta = atan2(x2, sqrt(x1^2 + x3^2 + eps));        % β
 
 dynamicPressure = 0.5*airDensity*airspeed^2;      % Dinamik basınç
 
@@ -125,17 +125,17 @@ MAcg_b = Mac_b + cross(FA_b,rcg_b - rac_b);
 %% İTKİ KUVVETLERİ VE MOMENTLERİ
 % MOTOR HESAPLARI
 motorOmega = x13;
-
 motorTau = 0.05;                                   % Motor zaman sabiti, deneysel
+
 motorOmegaCmd = motorMaxOmega*u4;                  % Anlık motor çevrimi girdisi
 motorOmegaDot = (motorOmegaCmd - x13)/motorTau;    % Motor çevrimi girdisi türevi
 x13dot = motorOmegaDot;
 
-n_Motor = motorOmega/(2*pi);
-J = airspeed/(n_Motor*rotorDiameter + eps);
+revolutions_Motor = motorOmega/(2*pi);
+J = airspeed/(revolutions_Motor*rotorDiameter + eps);
 CT = motor_CT0 + motor_CT1*J + motor_CT2*J^2;
 
-FMo = airDensity * n_Motor^2 * rotorDiameter^4 * CT;    
+FMo = airDensity * revolutions_Motor^2 * rotorDiameter^4 * CT;    
 FE_b = [FMo;0;0];   % Motor Fb ile aynı hizada varsayımı - (DEĞİŞTİR)
 
 mew = [Xcg - Xapt; Yapt - Ycg; Zcg - Zapt];
@@ -167,12 +167,7 @@ H_phi = [ 1  sin(x7)*tan(x8_sat)   cos(x7)*tan(x8_sat);
 x7to9dot = H_phi*wbe_b;
 
 %% NAVİGASYON DENKLEMLERİ
-C1v = rotz(x9);
-C21 = roty(x8);
-Cb2 = rotx(x7);
-
-Cbv = Cb2*C21*C1v;
-Cvb = Cbv';
+Cvb = (rotx(x7)*roty(x8)*rotz(x9))';
 
 x10to12dot = Cvb*V_b;
 
