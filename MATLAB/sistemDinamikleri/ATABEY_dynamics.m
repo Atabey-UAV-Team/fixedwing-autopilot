@@ -19,55 +19,56 @@ u4 = U(4);  % delta_Motor [0-1]
 
 %% SABİTLER
 % Araç Sabitleri
-mass = 14;          % Toplam kütle (kg)
+mass = 2.72;            % Toplam kütle (kg)
 
-cbar = 0;           % Ortalama Aerodinamik Kord (m)
-lt = 0;             % Kuyruğun Aerodinamik Kordu - Araç Gövdesi arası mesafe (m) 
-wingSurface = 0;    % Kanat alanı (m^2)
-tailSurface = 0;    % Kuyruk alanı (m^2)
+cbar = 0.3;             % Ortalama Aerodinamik Kord (m)
+lt = 0.35;              % Kuyruğun Aerodinamik Kordu - Araç Gövdesi arası mesafe (m) 
+wingSurface = 0.4;      % Kanat alanı (m^2)
+tailSurface = 0.345;    % Kuyruk alanı (m^2)
+wingSpan = 1.33;        % Kanat açıklığı
 
-Xcg = 0;            % Moment referansına göre (Fm), ağırlık merkezinin X konumu (m)
-Ycg = 0;            % Moment referansına göre (Fm), ağırlık merkezinin Y konumu (m)
-Zcg = 0;            % Moment referansına göre (Fm), ağırlık merkezinin Z konumu (m)
+Xcg = 0.2;            % Moment referansına göre (Fm), ağırlık merkezinin X konumu (m)
+Ycg = 0;              % Moment referansına göre (Fm), ağırlık merkezinin Y konumu (m)
+Zcg = 0.02;           % Moment referansına göre (Fm), ağırlık merkezinin Z konumu (m)
 
-Xac = 0;            % Moment referansına göre (Fm), aerodinamik merkezin X konumu (m)
-Yac = 0;            % Moment referansına göre (Fm), aerodinamik merkezin Y konumu (m)
-Zac = 0;            % Moment referansına göre (Fm), aerodinamik merkezin Z konumu (m)
+Xac = 0.22;           % Moment referansına göre (Fm), aerodinamik merkezin X konumu (m)
+Yac = 0;              % Moment referansına göre (Fm), aerodinamik merkezin Y konumu (m)
+Zac = 0;              % Moment referansına göre (Fm), aerodinamik merkezin Z konumu (m)
 
-Xapt = 0;           % Moment referansına göre (Fm), motor kuvvetinin X konumu (m)
-Yapt = 0;           % Moment referansına göre (Fm), motor kuvvetinin Y konumu (m)
-Zapt = 0;           % Moment referansına göre (Fm), motor kuvvetinin Z konumu (m)
+Xapt = 0.5;           % Moment referansına göre (Fm), motor kuvvetinin X konumu (m)
+Yapt = 0;             % Moment referansına göre (Fm), motor kuvvetinin Y konumu (m)
+Zapt = 0;             % Moment referansına göre (Fm), motor kuvvetinin Z konumu (m)
 
 % Çevresel Sabitler
 gravity = 9.81;             % Yer çekimi (m/s^2)
 airDensity = 1.225;         % Hava yoğunluğu (kg/m^3)
 depsda = 0.25;              % Alpha'ya göre downwash değişimi (rad/rad)
 
-alpha_L0 = 0*pi/180 ;       % 0 lift iken hücum açısı (rad)
-n_CL = 5.5;                 % Lift grafiğinin lineer bölgedeki eğimi
-alpha_3 = 0.0;              % alpha^3 katsayısı
-alpha_2 = 0.0;              % alpha^2 katsayısı
-alpha_1 = 0.0;              % alpha^1 katsayısı
-alpha_0 = 0.0;              % alpha^0 katsayısı
-alphaSwitch = 0*pi/180;     % Lift grafiğinin lineer bölgeden nonlineer 
-                            % bölgeye geçişindeki alfa değeri (rad)
+alpha_L0 = -0.035;          % 0 lift iken hücum açısı (rad)
+n_CL = 4.8;                 % Lift grafiğinin lineer bölgedeki eğimi
 
 % Kontrol Sınırları -> Simulasyon Koduna Gömülü
 % Simulink Saturation bloğu ile kısıtlama yapıldı
+% u_limit.aileron  = 25 * pi/180; % rad (+/-)
+% u_limit.elevator = 20 * pi/180; % rad (+/-)
+% u_limit.rudder   = 20 * pi/180; % rad (+/-)
+% u_limit.throttle = [0, 1];      % %0 - %100
 
 % Motor Parametreleri
-motorMaxOmega = 0;          % Azami motor hızı, deneysel (rad/s)
-rotorDiameter = 0;          % Pervane çapı (m)
-motor_CT0 = 0;              % Deneysel Katsayılar
-motor_CT1 = 0;
-motor_CT2 = 0;
+motorMaxOmega = 1100;          % Azami motor hızı, deneysel (rad/s)
+rotorDiameter = 0.2794;        % Pervane çapı (m)
+motor_CT0 = 0.115;             % Deneysel Katsayılar
+motor_CT1 = -0.075;
+motor_CT2 = -0.10;
 
 %% DEĞİŞKEN DEĞERLER
-airspeed = max(sqrt(x1^2 + x2^2 + x3^2), 0.1);    % Airspeed
+airspeed = max(sqrt(x1^2 + x2^2 + x3^2), 3.0);    % Airspeed
 % Kalkış anında kararsızlık koruması
 
 alpha = atan2(x3,x1);                             % α
 beta = atan2(x2, sqrt(x1^2 + x3^2 + eps));        % β
+alpha = max(min(alpha, 20*pi/180), -20*pi/180);
+beta  = max(min(beta, 15*pi/180), -15*pi/180);
 
 dynamicPressure = 0.5*airDensity*airspeed^2;      % Dinamik basınç
 
@@ -76,13 +77,7 @@ V_b = [x1;x2;x3];
 
 %% AERODİNAMİK KUVVET KATSAYILARI
 % CL_wb
-if alpha < alphaSwitch
-    CL_wb = n_CL*(alpha - alpha_L0);                       
-    % Lineer bölge
-else
-    CL_wb = alpha_3*alpha^3 + alpha_2*alpha^2 + alpha_1*alpha + alpha_0;    
-    % Nonlineer bölge
-end
+CL_wb = n_CL*(alpha - alpha_L0);                       
 
 % CL_t
 epsilon = depsda*(alpha-alpha_L0);
@@ -92,27 +87,44 @@ CL_t = 3.1*(tailSurface/wingSurface)*alpha_t;
 
 totalLift = CL_wb + CL_t;                      % Toplam Lift, CL
 
-totalDrag = 0.13 + 0.07*(5.5*alpha+0.654)^2;   % Toplam Drag, CD
+CD0 = 0.03;
+k   = 0.05;
+totalDrag = CD0 + k*totalLift^2;               % Toplam Drag, CD
 
-sideForce = -1.6*beta + 0.24*u3;               % Yanal Kuvvet, CY, ?, CY = CYβ​​*β + CYδr*​​​δr
+CY_beta = -0.85;
+CY_deltaR = 0.24;
+sideForce = CY_beta*beta + CY_deltaR*u3;       % Yanal Kuvvet, CY, ?, CY = CYβ​​*β + CYδr*​​​δr             
 
 %% F_s'E GÖRE BOYUTSAL KUVVETLER
 FA_s = [-totalDrag*dynamicPressure*wingSurface;
          sideForce*dynamicPressure*wingSurface;
         -totalLift*dynamicPressure*wingSurface];
 
-FA_b = roty(alpha)*FA_s;
+FA_b = roty(alpha) * rotz(beta) * FA_s;
 
 %% AC'YE GÖRE AERODİNAMİK MOMENT KATSAYILARI
 eta11 = 0; % ???
-eta21 = 0;
+eta21 = 0.02;
 eta31 = 0;
 eta = [eta11;eta21;eta31];
 
-dCMdx = zeros(3,3);
-dCMdu = zeros(3,3);
+dCMdx = [-0.45   -0.12    0.08 ;
+           0    -12.5     0   ;
+           0     0.085  -0.15 ];
+dCMdu = [0.18     0        0 ;
+          0    -0.95       0 ;
+          0       0     0.07 ];
 
-CMac_b = eta + dCMdx*wbe_b + dCMdu*[u1;u2;u3];
+p_hat = x4 * wingSpan    / (2*airspeed);
+q_hat = x5 * cbar / (2*airspeed);
+r_hat = x6 * wingSpan    / (2*airspeed);
+
+w_hat = [p_hat; q_hat; r_hat];
+
+CMac_b = eta + dCMdx*w_hat + dCMdu*[u1;u2;u3];
+
+Cm_alpha = -0.65;
+CMac_b(2) = CMac_b(2) + Cm_alpha * alpha;
 
 % AC'YE GÖRE AERODİNAMİK MOMENTLER
 Mac_b = CMac_b*dynamicPressure*wingSurface*cbar;
@@ -131,9 +143,10 @@ motorOmegaCmd = motorMaxOmega*u4;                  % Anlık motor çevrimi girdi
 motorOmegaDot = (motorOmegaCmd - x13)/motorTau;    % Motor çevrimi girdisi türevi
 x13dot = motorOmegaDot;
 
-revolutions_Motor = motorOmega/(2*pi);
+revolutions_Motor = max(motorOmega/(2*pi), 1.0);
 J = airspeed/(revolutions_Motor*rotorDiameter + eps);
 CT = motor_CT0 + motor_CT1*J + motor_CT2*J^2;
+CT = max(CT, 0);
 
 FMo = airDensity * revolutions_Motor^2 * rotorDiameter^4 * CT;    
 FE_b = [FMo;0;0];   % Motor Fb ile aynı hizada varsayımı - (DEĞİŞTİR)
@@ -146,23 +159,25 @@ g_b = [-gravity*sin(x8);gravity*cos(x8)*sin(x7);gravity*cos(x8)*cos(x7);];
 Fg_b = mass*g_b;
 
 %% DURUM TÜREVLERİ
-InertiaMatrix = mass * [zeros(3,3)];     % Eylemsizlik matrisi               
-invInertia = inv(InertiaMatrix);         % Ib oluşturulunca hard code'la
+InertiaMatrix = [0.476,  0,   -0.109;  % Eylemsizlik matrisi
+                   0,  1.031,   0;
+                -0.109,  0,   1.411];               
+invInertia = [2.1387         0    0.1652;
+                 0        0.9699     0;
+              0.1652         0    0.7215];
 
 F_b = Fg_b + FE_b + FA_b;
 x1to3dot = (1/mass) * F_b - cross(wbe_b,V_b);
 
 Mcg_b = MAcg_b + MEcg_b;
 x4to6dot = invInertia*(Mcg_b - cross(wbe_b,InertiaMatrix*wbe_b));   
-% invIb hard code'landığında uyarı gidecek
 
 % EULER HESAPLARI
-% Quaternion kullanımı?
 % Kararsızlık koruması
-x8_sat = min(max(x8, -(89*pi/180)), 89*pi/180);
-H_phi = [ 1  sin(x7)*tan(x8_sat)   cos(x7)*tan(x8_sat);
-          0  cos(x7)             -sin(x7);
-          0  sin(x7)/cos(x8_sat)  cos(x7)/cos(x8_sat) ];
+x8_safe = min(max(x8, -80*pi/180), 80*pi/180);
+H_phi = [1  sin(x7)*tan(x8_safe)   cos(x7)*tan(x8_safe);
+         0  cos(x7)              -sin(x7);
+         0  sin(x7)/cos(x8_safe)  cos(x7)/cos(x8_safe) ];
     
 x7to9dot = H_phi*wbe_b;
 
@@ -183,6 +198,7 @@ Yecef = X(11);
 Zecef = X(12);
 
 p_geodetic = sqrt(Xecef^2 + Yecef^2);
+p_geodetic = max(p_geodetic, 1.0);
 
 % Longitude (λ)
 geodetic_lon = atan2(Yecef, Xecef);
