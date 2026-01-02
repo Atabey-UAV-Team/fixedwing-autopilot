@@ -62,28 +62,25 @@ motor_CT1 = -0.075;
 motor_CT2 = -0.10;
 
 %% DEĞİŞKEN DEĞERLER
-airspeed = max(sqrt(x1^2 + x2^2 + x3^2), 3.0);    % Airspeed
+airspeed = max(sqrt(x1^2 + x2^2 + x3^2), 1e-1);    % Airspeed
 % Kalkış anında kararsızlık koruması
 
 alpha = atan2(x3,x1);                             % α
 beta = atan2(x2, sqrt(x1^2 + x3^2 + eps));        % β
-alpha = max(min(alpha, 20*pi/180), -20*pi/180);
-beta  = max(min(beta, 15*pi/180), -15*pi/180);
 
-dynamicPressure = 0.5*airDensity*airspeed^2;      % Dinamik basınç
+dynamicPressure = 0.5*airDensity*airspeed^2;
 
 wbe_b = [x4;x5;x6];
 V_b = [x1;x2;x3];
 
 %% AERODİNAMİK KUVVET KATSAYILARI
 % CL_wb
-CL_wb = n_CL*(alpha - alpha_L0);                       
+CL_wb = n_CL*(min(max(alpha, -10*pi/180), 13*pi/180) - alpha_L0);
 
 % CL_t
 epsilon = depsda*(alpha-alpha_L0);
 alpha_t = alpha-epsilon+u2+1.3*x5*lt/airspeed;     % ?
 CL_t = 3.1*(tailSurface/wingSurface)*alpha_t;
-
 
 totalLift = CL_wb + CL_t;                      % Toplam Lift, CL
 
@@ -103,8 +100,8 @@ FA_s = [-totalDrag*dynamicPressure*wingSurface;
 FA_b = roty(alpha) * rotz(beta) * FA_s;
 
 %% AC'YE GÖRE AERODİNAMİK MOMENT KATSAYILARI
-eta11 = 0; % ???
-eta21 = 0.02;
+eta11 = 0;
+eta21 = 0; % 0.02
 eta31 = 0;
 eta = [eta11;eta21;eta31];
 
@@ -143,12 +140,12 @@ motorOmegaCmd = motorMaxOmega*u4;                  % Anlık motor çevrimi girdi
 motorOmegaDot = (motorOmegaCmd - x13)/motorTau;    % Motor çevrimi girdisi türevi
 x13dot = motorOmegaDot;
 
-revolutions_Motor = max(motorOmega/(2*pi), 1.0);
-J = airspeed/(revolutions_Motor*rotorDiameter + eps);
+revolutionsMotor = max(motorOmega/(2*pi), 1e-3);
+J = airspeed/(revolutionsMotor*rotorDiameter + eps);
 CT = motor_CT0 + motor_CT1*J + motor_CT2*J^2;
 CT = max(CT, 0);
 
-FMo = airDensity * revolutions_Motor^2 * rotorDiameter^4 * CT;    
+FMo = airDensity * revolutionsMotor^2 * rotorDiameter^4 * CT;    
 FE_b = [FMo;0;0];   % Motor Fb ile aynı hizada varsayımı - (DEĞİŞTİR)
 
 mew = [Xcg - Xapt; Yapt - Ycg; Zcg - Zapt];
@@ -161,7 +158,7 @@ Fg_b = mass*g_b;
 %% DURUM TÜREVLERİ
 InertiaMatrix = [0.476,  0,   -0.109;  % Eylemsizlik matrisi
                    0,  1.031,   0;
-                -0.109,  0,   1.411];               
+                -0.109,  0,   1.411];
 invInertia = [2.1387         0    0.1652;
                  0        0.9699     0;
               0.1652         0    0.7215];
@@ -173,7 +170,6 @@ Mcg_b = MAcg_b + MEcg_b;
 x4to6dot = invInertia*(Mcg_b - cross(wbe_b,InertiaMatrix*wbe_b));   
 
 % EULER HESAPLARI
-% Kararsızlık koruması
 x8_safe = min(max(x8, -80*pi/180), 80*pi/180);
 H_phi = [1  sin(x7)*tan(x8_safe)   cos(x7)*tan(x8_safe);
          0  cos(x7)              -sin(x7);
@@ -183,7 +179,6 @@ x7to9dot = H_phi*wbe_b;
 
 %% NAVİGASYON DENKLEMLERİ
 Cvb = (rotx(x7)*roty(x8)*rotz(x9))';
-
 x10to12dot = Cvb*V_b;
 
 %% JEODEZİK KOORDİNATLAR
@@ -198,7 +193,7 @@ Yecef = X(11);
 Zecef = X(12);
 
 p_geodetic = sqrt(Xecef^2 + Yecef^2);
-p_geodetic = max(p_geodetic, 1.0);
+p_geodetic = max(p_geodetic, 1e-6);
 
 % Longitude (λ)
 geodetic_lon = atan2(Yecef, Xecef);

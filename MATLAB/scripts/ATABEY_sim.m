@@ -1,8 +1,9 @@
 clc, clear, close all
 
+% MATLAB klasörü altında çalıştırın
 addpath('sistemDinamikleri')
 addpath('simulinkModelleri')
-simTime = 5;
+simTime = 60;
 
 % SABİTLER
 x0 = [0;
@@ -21,8 +22,8 @@ x0 = [0;
 
 u = [0;
     0;
-    20;
-    0.5;];
+    0;
+    0;];
 
 % KONTROL SINIRLARI
 u1max = 25*pi/180;       % Aileron min/max derecesi
@@ -47,11 +48,11 @@ X_ts = endResults.SimulatedOutputs;
 U_ts = endResults.SimulatedInputs;
 time = X_ts.Time;
 
-% Convert 3D timeseries to 2D numeric arrays (time × states/inputs)
-X_data = permute(X_ts.Data, [3 1 2]);  % N x 13 x 1
+% 3D timeseries to 2D numeric arrays (time × states/inputs)
+X_data = permute(X_ts.Data, [3 1 2]);
 X_data = squeeze(X_data);  
-U_data = reshape(U_ts.Data, U_ts.Length, []);  % 1394 × 13
-U_data = U_data(:,1:4);                         % take first 4 inputs
+U_data = reshape(U_ts.Data, U_ts.Length, []);
+U_data = U_data(:,1:4);
 
 figure('Name','Sistem Durumları','NumberTitle','off')
 numStates = size(X_data,2);
